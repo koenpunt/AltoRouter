@@ -2,16 +2,48 @@
 
 class AltoRouter {
 
-	protected $routes = array();
-	protected $namedRoutes = array();
-	protected $basePath = '';
+	protected $_routes = array();
+	protected $_namedRoutes = array();
+	protected $_basePath = '';
 
 	/**
 	 * Set the base path.
 	 * Useful if you are running your application from a subdirectory.
 	 */
 	public function setBasePath($basePath) {
-		$this->basePath = $basePath;
+		if($basePath && substr($basePath, 0, 1) != '/'){
+			$basePath = '/' . $basePath;
+		}
+		$this->_basePath = $basePath;
+	}
+
+	/**
+	 * Set the base path back to an empty string.
+	 */
+	public function clearBasePath() {
+		$this->_basePath = '';
+	}
+
+	/**
+	 * Get the base path.
+	 */
+	public function getBasePath(){
+		return $this->_basePath;
+	}
+
+	/**
+	 * Add a named route, throws an exception when the name is already used
+	 *
+	 * @param string $name
+	 * @param array $route
+	 * @return void
+	 * @author Koen Punt
+	 */
+	public function addNamedRoute($name, $route){
+		if(isset($this->_namedRoutes[$name])) { 
+			throw new \Exception("Can not redeclare route '{$name}'");
+		}
+		$this->_namedRoutes[$name] = $route;
 	}
 
 	/**
@@ -26,18 +58,13 @@ class AltoRouter {
 	public function map($method, $route, $target, $name = null) {
 
 		if($route != '*') {
-			$route = $this->basePath . $route;
+			$route = $this->getBasePath() . $route;
 		}
 
-		$this->routes[] = array($method, $route, $target, $name);
+		$this->_routes[] = array($method, $route, $target, $name);
 
 		if($name) {
-			if(isset($this->namedRoutes[$name])) {
-				throw new \Exception("Can not redeclare route '{$name}'");
-			} else {
-				$this->namedRoutes[$name] = $route;
-			}
-
+			$this->addNamedRoute($name, $route);
 		}
 
 		return;
@@ -46,23 +73,17 @@ class AltoRouter {
 	/**
 	 * Reversed routing
 	 *
-	 * Generate the URL for a named route. Replace regexes with supplied parameters
+	 * Generate the URL for a route. Replace regexes with supplied parameters
 	 *
-	 * @param string $routeName The name of the route.
+	 * @param string $route The name of a route or a actual route.
 	 * @param array @params Associative array of parameters to replace placeholders with.
 	 * @return string The URL of the route with named parameters in place.
 	 */
-	public function generate($routeName, array $params = array()) {
-
-		// Check if named route exists
-		if(!isset($this->namedRoutes[$routeName])) {
-			throw new \Exception("Route '{$routeName}' does not exist.");
+	public function generate($route, array $params = array()) {
+		if(isset($this->_namedRoutes[$route])){
+			$route = $this->_namedRoutes[$route];
 		}
-
-		// Replace named parameters
-		$route = $this->namedRoutes[$routeName];
 		$url = $route;
-
 		if (preg_match_all('`(/|\.|)\[([^:\]]*+)(?::([^:\]]*+))?\](\?|)`', $route, $matches, PREG_SET_ORDER)) {
 
 			foreach($matches as $match) {
@@ -83,6 +104,25 @@ class AltoRouter {
 		}
 
 		return $url;
+	}
+
+	/**
+	 * Reversed routing
+	 *
+	 * Lookup a named route and generate URL for it.
+	 * Generate the URL for a named route. Replace regexes with supplied parameters
+	 *
+	 * @param string $routeName The name of the route.
+	 * @param array @params Associative array of parameters to replace placeholders with.
+	 * @return string The URL of the route with named parameters in place.
+	 */
+	public function lookup($routeName, array $params = array()) {
+		// Check if named route exists
+		if(!isset($this->_namedRoutes[$routeName])) {
+			throw new \Exception("Route '{$routeName}' does not exist.");
+		}
+		// Replace named parameters
+		return $this->generate($routeName, $params);
 	}
 
 	/**
@@ -115,7 +155,7 @@ class AltoRouter {
 		// http://www.mail-archive.com/internals@lists.php.net/msg33119.html
 		$_REQUEST = array_merge($_GET, $_POST);
 
-		foreach($this->routes as $handler) {
+		foreach($this->_routes as $handler) {
 			list($method, $_route, $target, $name) = $handler;
 
 			$methods = explode('|', $method);

@@ -5,15 +5,11 @@ require 'AltoRouter.php';
 class AltoRouterDebug extends AltoRouter{
 	
 	public function getNamedRoutes(){
-		return $this->namedRoutes;
+		return $this->_namedRoutes;
 	}
 	
 	public function getRoutes(){
-		return $this->routes;
-	}
-	
-	public function getBasePath(){
-		return $this->basePath;
+		return $this->_routes;
 	}
 }
 
@@ -52,8 +48,35 @@ class AltoRouterTest extends PHPUnit_Framework_TestCase
 		$basePath = $this->router->setBasePath('/some/path');
 		$this->assertEquals('/some/path', $this->router->getBasePath());
 		
-		$basePath = $this->router->setBasePath('/some/path');
+		$basePath = $this->router->setBasePath('some/path');
 		$this->assertEquals('/some/path', $this->router->getBasePath());
+	}
+
+	/**
+	 * @covers AltoRouter::clearBasePath
+	 */
+	public function testClearBasePath()
+	{
+		$basePath = $this->router->setBasePath('/some/path');
+		$this->assertNotEmpty($this->router->getBasePath());
+		
+		$this->router->clearBasePath();
+		$this->assertEmpty($this->router->getBasePath());
+	}
+
+
+	/**
+	 * @covers AltoRouter::addNamedRoute
+	 */
+	public function testAddNamedRoute(){
+		$this->router->addNamedRoute('some_route', '/[:controller]/[:action]');
+		
+		try{
+			$this->router->addNamedRoute('some_route', '/[:controller]/[:action]');
+			$this->fail('Should trigger error on duplicate route');
+		}catch(Exception $e){
+			$this->assertEquals("Can not redeclare route 'some_route'", $e->getMessage());
+		}
 	}
 
 	/**
@@ -133,7 +156,6 @@ class AltoRouterTest extends PHPUnit_Framework_TestCase
 			'controller' => 'test',
 			'action' => 'someaction'
 		);
-		
 		$this->assertEquals('/test/someaction',
 			$this->router->generate('bar_route', $params));
 		
@@ -147,10 +169,13 @@ class AltoRouterTest extends PHPUnit_Framework_TestCase
 			$this->router->generate('bar_route', $params));
 	}
 	
-	public function testGenerateWithNonexistingRoute()
+	public function testLookup()
 	{
+		$this->router->map('GET', '/test/[:id]', function(){}, 'bar_route');
+		
+		$this->assertEquals('/test/13', $this->router->lookup('bar_route', array('id' => 13)));
 		try{
-			$this->router->generate('nonexisting_route');
+			$this->router->lookup('nonexisting_route');
 			$this->fail('Should trigger an exception on nonexisting named route');
 		}catch(Exception $e){
 			$this->assertEquals("Route 'nonexisting_route' does not exist.", $e->getMessage());
