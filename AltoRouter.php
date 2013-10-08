@@ -99,10 +99,7 @@ class AltoRouter {
 					$url = str_replace($pre . $block, '', $url);
 				}
 			}
-
-
 		}
-
 		return $url;
 	}
 
