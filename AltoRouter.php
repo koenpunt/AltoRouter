@@ -170,10 +170,6 @@ class AltoRouter {
 			$requestMethod = $this->getRequestMethod() ?: 'GET';
 		}
 
-		// Force request_order to be GP
-		// http://www.mail-archive.com/internals@lists.php.net/msg33119.html
-		$_REQUEST = array_merge($_GET, $_POST);
-
 		foreach($this->routes as $handler) {
 			list($method, $_route, $target, $name) = $handler;
 
