@@ -227,7 +227,7 @@ class AltoRouter {
 				$match = preg_match($regex, $requestUrl, $params);
 			}
 
-			if(($match == true || $match > 0)) {
+			if(($match === true || $match > 0)) {
 
 				if($params) {
 					foreach($params as $key => $value) {
