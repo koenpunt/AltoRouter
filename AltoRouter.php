@@ -14,6 +14,8 @@ class AltoRouter {
 		''   => '[^/\.]++'
 	);
 
+	protected $matches = array();
+
 	/**
 	  * Create router in one call from config.
 	  *
@@ -26,7 +28,7 @@ class AltoRouter {
 		$this->setBasePath($basePath);
 		$this->addMatchTypes($matchTypes);
 	}
-	
+
 	/**
 	 * Retrieves all routes.
 	 * Useful if you want to process or display routes.
@@ -143,19 +145,36 @@ class AltoRouter {
 
 	/**
 	 * Match a given Request Url against stored routes
-	 * @param string $requestUrl
-	 * @param string $requestMethod
-	 * @return array|boolean Array with route information on success, false on failure (no match).
+	 * @see AltoRouter::_match
 	 */
-	public function match($requestUrl = null, $requestMethod = null) {
-
-		$params = array();
-		$match = false;
+	public function match($requestUrl = null, $requestMethod = null){
 
 		// set Request Url if it isn't passed as parameter
 		if($requestUrl === null) {
 			$requestUrl = $this->getRequestURI() ?: '/';
 		}
+
+		// set Request Method if it isn't passed as a parameter
+		if($requestMethod === null) {
+			$requestMethod = $this->getRequestMethod() ?: 'GET';
+		}
+
+		$cacheKey = "$requestUrl--$requestMethod";
+		if(!isset($this->matches[$cacheKey])){
+			$this->matches[$cacheKey] = $this->_match($requestUrl, $requestMethod);
+		}
+		return $this->matches[$cacheKey];
+	}
+
+	/**
+	 * Match a given Request Url against stored routes
+	 * @param string $requestUrl
+	 * @param string $requestMethod
+	 * @return array|boolean Array with route information on success, false on failure (no match).
+	 */
+	protected function _match($requestUrl, $requestMethod) {
+		$params = array();
+		$match = false;
 
 		// strip base path from request url
 		$requestUrl = substr($requestUrl, strlen($this->basePath));
@@ -163,11 +182,6 @@ class AltoRouter {
 		// Strip query string (?a=b) from Request Url
 		if (($strpos = strpos($requestUrl, '?')) !== false) {
 			$requestUrl = substr($requestUrl, 0, $strpos);
-		}
-
-		// set Request Method if it isn't passed as a parameter
-		if($requestMethod === null) {
-			$requestMethod = $this->getRequestMethod() ?: 'GET';
 		}
 
 		foreach($this->routes as $handler) {
@@ -293,4 +307,5 @@ class AltoRouter {
 		}
 		return "`^$route$`u";
 	}
+
 }
